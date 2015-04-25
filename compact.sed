@@ -82,3 +82,4 @@ s/SAI\([0-9]\+\)_\([^ 	]\+\)_\([^ 	]\+\)/SA\1\2\3/g
 s/\// /g
 # Fix the IO stuff
 s/I O/I\/O/g
+s/[ 	]Additional_functions//g
