@@ -5,6 +5,8 @@ __author__ = 'esdentem'
 
 import csv
 import re
+import StringIO
+import os
 
 
 def pretty_print_banks(banks):
@@ -20,54 +22,54 @@ def pretty_print_banks(banks):
                                             pin['Pin_functions'])
 
 
-def lib_head():
-    print "EESchema-Library Version 2.3"
-    print "#encoding utf-8"
+def lib_head(f):
+    print >>f, 'EESchema-Library Version 2.3\n'
+    print >>f, '#encoding utf-8'
 
 
-def lib_foot():
-    print "#"
-    print "#End Library"
+def lib_foot(f):
+    print >>f, '#'
+    print >>f, '#End Library'
 
 
-def symbol_head(name, footprint):
-    print "#"
-    print "# ", name
-    print "#"
-    print "DEF %s U 0 50 Y Y 1 F N" % (name)
-    print "F0 \"U\" 0 100 50 H V C CNN"
-    print "F1 \"%s\" 0 -100 50 H V C CNN" % (name)
-    print "F2 \"%s\" 0 -200 50 H V C CIN" % (footprint)
-    print "F3 \"\" 0 0 50 H V C CNN"
-    print "DRAW"
+def symbol_head(f, name, footprint):
+    print >>f, "#"
+    print >>f, "# " + name
+    print >>f, "#"
+    print >>f, "DEF " + name + " U 0 50 Y Y 1 F N"
+    print >>f, "F0 \"U\" 0 100 50 H V C CNN"
+    print >>f, "F1 \"" + name + "\" 0 -100 50 H V C CNN"
+    print >>f, "F2 \"" + footprint + "\" 0 -200 50 H V C CIN"
+    print >>f, "F3 \"\" 0 0 50 H V C CNN"
+    print >>f, "DRAW"
 
 
-def symbol_frame(startx, starty, endx, endy):
-    print "S %s %s %s %s 0 1 10 N" % (startx, starty, endx, endy)
+def symbol_frame(f, startx, starty, endx, endy):
+    print >>f, "S %s %s %s %s 0 1 10 N" % (startx, starty, endx, endy)
 
 
-def symbol_pin(name, num, x, y, dir):
-    print "X %s %s %s %s 300 %s 50 50 1 1 I" % (name, num, x, y, dir)
+def symbol_pin(f, name, num, x, y, direction):
+    print >>f, "X %s %s %s %s 300 %s 50 50 1 1 I" % (name, num, x, y, direction)
 
 
-def symbol_bank(pins, x_offset, y_offset, spacing, dir):
+def symbol_bank(f, pins, x_offset, y_offset, spacing, direction):
     counter = 0
     for pin in sorted(pins, key=lambda p: p['Pin_name']):
         name = pin['Pin_name']
-        if pin['Pin_functions'] != []:
+        if pin['Pin_functions']:
             name += "/" + '/'.join(pin['Pin_functions'])
-        if dir == 'R' or dir == 'L':
-            symbol_pin(name, pin['Pin'], x_offset, y_offset - (counter * spacing), dir)
-        elif dir == 'U' or dir == 'D':
-            symbol_pin(name, pin['Pin'], x_offset, y_offset - (counter * spacing), dir)
+        if direction == 'R' or direction == 'L':
+            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction)
+        elif direction == 'U' or direction == 'D':
+            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction)
         else:
             print "Unknown direction!!!"
         counter += 1
 
 
-def symbol_foot():
-    print "ENDDRAW"
-    print "ENDDEF"
+def symbol_foot(f):
+    print >>f, "ENDDRAW"
+    print >>f, "ENDDEF"
 
 
 def vertical_height(banks):
@@ -94,7 +96,7 @@ def vertical_height(banks):
     return max(left_height, right_height)
 
 
-def lib_symbol(name, all_data, footprint):
+def lib_symbol(f, name, all_data, footprint):
     data = []
     # Filter data for the specific footprint
     for row in all_data:
@@ -131,7 +133,7 @@ def lib_symbol(name, all_data, footprint):
             else:
                 banks['OTHER'].append(row)
     # pretty_print_banks(banks)
-    symbol_head(name, footprint)
+    symbol_head(f, name, footprint)
 
     height = vertical_height(banks)
     v_offset = height / 2
@@ -140,37 +142,66 @@ def lib_symbol(name, all_data, footprint):
     width = 7000
     h_offset = width / 2
 
-    symbol_frame(-h_offset + 300, v_offset + 100, h_offset - 300, v_offset - height - 100)
+    symbol_frame(f, -h_offset + 300, v_offset + 100, h_offset - 300, v_offset - height - 100)
 
     # Plot all the banks except VSS and VDD
-    dir = 'R'
+    direction = 'R'
     counter = 0
     for bank in sorted(banks.keys()):
         if not (bank == "VSS" or bank == "VDD"):
-            if dir == 'R':
-                symbol_bank(banks[bank], -h_offset, v_offset + (-100 * 17) * counter, 100, dir)
-                dir = 'L'
-            elif dir == 'L':
-                symbol_bank(banks[bank], h_offset, v_offset + (-100 * 17) * counter, 100, dir)
-                dir = 'R'
+            if direction == 'R':
+                symbol_bank(f, banks[bank], -h_offset, v_offset + (-100 * 17) * counter, 100, direction)
+                direction = 'L'
+            elif direction == 'L':
+                symbol_bank(f, banks[bank], h_offset, v_offset + (-100 * 17) * counter, 100, direction)
+                direction = 'R'
                 counter += 1
 
     # If the last bank was on the left side then the VDD bank would go on the right side in theory,
     # this is not what we want though, we want both VDD and VSS to be on the same height, so we are moving down
     # to the next bank row
-    if dir == 'L':
+    if direction == 'L':
         counter += 1
 
-    symbol_bank(banks['VDD'], -h_offset, v_offset + (-100 * 17) * counter, 100, 'R')
-    symbol_bank(banks['VSS'],  h_offset, v_offset + (-100 * 17) * counter, 100, 'L')
+    symbol_bank(f, banks['VDD'], -h_offset, v_offset + (-100 * 17) * counter, 100, 'R')
+    symbol_bank(f, banks['VSS'],  h_offset, v_offset + (-100 * 17) * counter, 100, 'L')
 
-    symbol_foot()
+    symbol_foot(f)
 
 # Open pin definition file
-f = open('../compact/stm32-pinout-STM32F437xx-and-STM32F439xx.txt', 'r')
+source_filename = "../compact/stm32-pinout-STM32F437xx-and-STM32F439xx.txt"
+sourcef = None
+try:
+    sourcef = open(source_filename, 'r')
+except:
+    print "failed to open source file"
+    exit(1)
+
+# Open library file
+lib_filename = "../lib/stm32.lib"
+lib_dir = os.path.dirname(lib_filename)
+
+try:
+    os.stat(lib_dir)
+except:
+    os.mkdir(lib_dir)
+
+libf = open(lib_filename, 'w')
+
+# Extract meta description section
+metaf = StringIO.StringIO()
+for line in sourcef:
+    if re.match("^ *#", line):
+        print "quoted line"
+    elif re.match("^----", line):
+        print "end of meta block"
+        break
+    else:
+        print "Line: %s" % line
+        metaf.write(line)
 
 # Read in as a tab separated CSV
-r = csv.DictReader(f, delimiter='\t')
+r = csv.DictReader(sourcef, delimiter='\t')
 
 # Find footprints
 footprints = []
@@ -178,18 +209,19 @@ for key in r.fieldnames:
     if re.match("(.*QFP.*)|(.*BGA.*)|(.*WLCSP.*)", key):
         footprints.append(key)
 
+# Extract pin definitions
 definitions = []
 for line in r:
     definitions.append(line)
 
-f.close()
+sourcef.close()
 
 # print(footprints)
 
-lib_head()
+lib_head(libf)
 for footprint in footprints:
-    lib_symbol('STM32F437xx-'+footprint, definitions, footprint)
-lib_foot()
+    lib_symbol(libf, 'STM32F437xx-'+footprint, definitions, footprint)
+lib_foot(libf)
 
 #for row in r:
 #    print(row['LQFP100'])
