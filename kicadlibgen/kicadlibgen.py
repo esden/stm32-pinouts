@@ -32,15 +32,20 @@ def lib_foot(f):
     print >>f, '#End Library'
 
 
-def symbol_head(f, name, footprint):
+def symbol_head(f, names, footprint):
     print >>f, "#"
-    print >>f, "# " + name
+    print >>f, "# " + names[0]
     print >>f, "#"
-    print >>f, "DEF " + name + " U 0 50 Y Y 1 F N"
+    print >>f, "DEF " + names[0] + " U 0 50 Y Y 1 F N"
     print >>f, "F0 \"U\" 0 100 50 H V C CNN"
-    print >>f, "F1 \"" + name + "\" 0 -100 50 H V C CNN"
+    print >>f, "F1 \"" + names[0] + "\" 0 -100 50 H V C CNN"
     print >>f, "F2 \"" + footprint + "\" 0 -200 50 H V C CIN"
     print >>f, "F3 \"\" 0 0 50 H V C CNN"
+    if len(names) > 1:
+        print >>f, "ALIAS",
+        for name in names[1:]:
+            f.write(" " + name)
+        print >>f, "\n",
     print >>f, "DRAW"
 
 
@@ -168,17 +173,65 @@ def lib_symbol(f, name, all_data, footprint):
 
     symbol_foot(f)
 
-# Open pin definition file
-source_filename = "../compact/stm32-pinout-STM32F437xx-and-STM32F439xx.txt"
-sourcef = None
-try:
-    sourcef = open(source_filename, 'r')
-except:
-    print "failed to open source file"
-    exit(1)
+
+def symbols_from_file(source_filename, target_file):
+    # Open pin definition file
+    print "Loading source file: " + source_filename
+    sourcef = None
+    try:
+        sourcef = open(source_filename, 'r')
+    except:
+        print "failed to open source file"
+        print "Exiting!"
+        exit(1)
+    # Extract meta description section
+    metaf = StringIO.StringIO()
+    for line in sourcef:
+        if re.match("^ *#", line):
+            print line,
+            # Nothing to do just ignore
+        elif re.match("^----", line):
+            # End of metadata block
+            break
+        else:
+            metaf.write(line)
+
+    # Read in metadata as a tab separated CSV
+    metaf.seek(0)
+    metadata_csv = csv.DictReader(metaf, delimiter='\t')
+
+    metadata = {}
+    for line in metadata_csv:
+        metadata[line['Footprint']] = line['Names'].split(' ')
+
+    # Read pin descriptions in as a tab separated CSV
+    pin_csv = csv.DictReader(sourcef, delimiter='\t')
+
+    # Find footprints
+    footprints = []
+    for key in pin_csv.fieldnames:
+        if re.match("(.*QFP.*)|(.*BGA.*)|(.*WLCSP.*)", key):
+            footprints.append(key)
+
+    # Extract pin definitions
+    definitions = []
+    for line in pin_csv:
+        definitions.append(line)
+
+    sourcef.close()
+    for footprint in footprints:
+        if footprint not in metadata:
+            print "Could not find metadata for the '" + footprint + "' footprint."
+            print "Exiting!"
+            exit(1)
+        lib_symbol(target_file, metadata[footprint], definitions, footprint)
+
 
 # Open library file
 lib_filename = "../lib/stm32.lib"
+
+print "Opening '" + lib_filename + "' as our target library file"
+
 lib_dir = os.path.dirname(lib_filename)
 
 try:
@@ -186,42 +239,22 @@ try:
 except:
     os.mkdir(lib_dir)
 
-libf = open(lib_filename, 'w')
-
-# Extract meta description section
-metaf = StringIO.StringIO()
-for line in sourcef:
-    if re.match("^ *#", line):
-        print "quoted line"
-    elif re.match("^----", line):
-        print "end of meta block"
-        break
-    else:
-        print "Line: %s" % line
-        metaf.write(line)
-
-# Read in as a tab separated CSV
-r = csv.DictReader(sourcef, delimiter='\t')
-
-# Find footprints
-footprints = []
-for key in r.fieldnames:
-    if re.match("(.*QFP.*)|(.*BGA.*)|(.*WLCSP.*)", key):
-        footprints.append(key)
-
-# Extract pin definitions
-definitions = []
-for line in r:
-    definitions.append(line)
-
-sourcef.close()
+try:
+    libf = open(lib_filename, 'w')
+except:
+    print "could not open target library file"
+    print "Exiting!"
+    exit(1)
 
 # print(footprints)
 
+source_filename = "../compact/stm32-pinout-STM32F437xx-and-STM32F439xx.txt"
+
 lib_head(libf)
-for footprint in footprints:
-    lib_symbol(libf, 'STM32F437xx-'+footprint, definitions, footprint)
+symbols_from_file(source_filename, libf)
 lib_foot(libf)
+
+libf.close()
 
 #for row in r:
 #    print(row['LQFP100'])
