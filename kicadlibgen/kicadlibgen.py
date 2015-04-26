@@ -248,7 +248,7 @@ except:
 
 # print(footprints)
 
-source_filename = "../compact/stm32-pinout-STM32F437xx-and-STM32F439xx.txt"
+source_filename = "../compact/STM32F437xx-STM32F439xx.txt"
 
 lib_head(libf)
 symbols_from_file(source_filename, libf)
