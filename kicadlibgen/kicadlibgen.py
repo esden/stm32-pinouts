@@ -7,6 +7,7 @@ import csv
 import re
 import StringIO
 import os
+import glob
 
 
 def pretty_print_banks(banks):
@@ -247,11 +248,12 @@ except:
     exit(1)
 
 # print(footprints)
-
-source_filename = "../compact/STM32F437xx-STM32F439xx.txt"
+source_dir = "../compact"
+source_filenames = glob.glob(source_dir + "/*")
 
 lib_head(libf)
-symbols_from_file(source_filename, libf)
+for source_filename in source_filenames:
+    symbols_from_file(source_filename, libf)
 lib_foot(libf)
 
 libf.close()
