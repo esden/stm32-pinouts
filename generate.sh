@@ -10,3 +10,7 @@ for i in source/*.txt ; do
 	echo "Converting to compact: " $(basename $i)
 	cat $i | ${SED} -f compact.sed > compact/$(basename $i)
 done
+
+cd kicadlibgen
+./kicadlibgen.py
+cd -
