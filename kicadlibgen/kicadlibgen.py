@@ -83,7 +83,7 @@ def symbol_foot(f):
     print >>f, "ENDDEF"
 
 
-def vertical_height(banks):
+def symbol_pin_height(banks):
     left_banks = []
     right_banks = []
 
@@ -105,6 +105,18 @@ def vertical_height(banks):
     right_height = (100 * 17) * (len(right_banks) - 1)
     right_height += 100 * (len(banks[right_banks[-1]]) -1)
     return max(left_height, right_height)
+
+
+def symbol_body_width(pins):
+    max_char_count = 0;
+
+    for pin in pins:
+        name = pin['Pin_name']
+        if pin['Pin_functions']:
+            name += "/" + '/'.join(pin['Pin_functions'])
+        max_char_count = max(len(name), max_char_count)
+
+    return 55 * (max_char_count * 2 + 2)
 
 
 def pin_append_combine(footprint, pin_list, new_pin):
@@ -185,12 +197,13 @@ def lib_symbol(f, name, all_data, footprint):
     # pretty_print_banks(banks)
     symbol_head(f, name, footprint)
 
-    height = vertical_height(banks)
+    height = symbol_pin_height(banks)
     v_offset = height / 2
     v_offset -= v_offset % 100
 
-    width = 7000
+    width = symbol_body_width(data)
     h_offset = width / 2
+    h_offset += h_offset % 100
 
     symbol_frame(f, -h_offset + 300, v_offset + 100, h_offset - 300, v_offset - height - 100)
 
