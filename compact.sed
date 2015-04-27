@@ -7,13 +7,15 @@ s/, / /g
 s/([0-9])//g
 # Remove EVENTOUT all io pins have it...
 s/[ \/]*EVENTOUT//g
-# Merge last and second to last cells
-s/^\([^ 	]\+\(	[^	]*\)\{12\}\)	\([^	]*\)$/\1 \3/
+# Merge last and second to last cells (this does not work due to different amount of footprints...)
+#s/^\([^ 	]\+\(	[^	]*\)\{12\}\)	\([^	]*\)$/\1 \3/
 # Clean up white spaces that might get introduced in the last step
 s/ *	 */	/g
-# Remove the trailing details on pin names
-s/^\([^ 	]\+\(	[^	]*\)\{7\}\)	\([^	]*\)-[^ 	]\+/\1	\3/
-s/^\([^ 	]\+\(	[^	]*\)\{7\}\)	\([^	]*\)([^ 	]\+/\1	\3/
+# Remove all bracketed stuff
+s/([^ 	]*)//g
+# Remove the trailing details on pin names (this does not work due to different amount of footprints...)
+#s/^\([^ 	]\+\(	[^	]*\)\{7\}\)	\([^	]*\)-[^ 	]\+/\1	\3/
+#s/^\([^ 	]\+\(	[^	]*\)\{7\}\)	\([^	]*\)([^ 	]\+/\1	\3/
 
 # ----
 # Shorten function names
@@ -82,4 +84,3 @@ s/SAI\([0-9]\+\)_\([^ 	]\+\)_\([^ 	]\+\)/SA\1\2\3/g
 s/\// /g
 # Fix the IO stuff
 s/I O/I\/O/g
-s/[ 	]Additional_functions//g

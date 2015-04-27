@@ -169,6 +169,8 @@ def lib_symbol(f, name, all_data, footprint):
                 functions = function_str.split(' ')
             else:
                 functions = []
+            if row['Additional_functions']:
+                functions += row['Additional_functions'].split(' ')
             pin_type = row['Pin_type']
             pin_structure = row['IO_structure']
             pin_append_combine(footprint,
