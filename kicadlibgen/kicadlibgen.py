@@ -97,14 +97,14 @@ def symbol_pin_height(banks):
                 right_banks.append(bank)
                 side = 'L'
 
-    left_banks.append('VDD')
-    right_banks.append('VSS')
+    left_height = 17 * (len(left_banks) - 1)
+    left_height += len(banks[left_banks[-1]])
+    right_height = 17 * (len(right_banks) - 1)
+    right_height += len(banks[right_banks[-1]])
 
-    left_height = (100 * 17) * (len(left_banks) - 1)
-    left_height += 100 * (len(banks[left_banks[-1]]) - 1)
-    right_height = (100 * 17) * (len(right_banks) - 1)
-    right_height += 100 * (len(banks[right_banks[-1]]) -1)
-    return max(left_height, right_height)
+    full_height = max(left_height, right_height) + 1 + max(len(banks['VSS']), len(banks['VDD']))
+
+    return full_height * 100
 
 
 def symbol_body_width(pins):
@@ -205,17 +205,22 @@ def lib_symbol(f, name, all_data, footprint):
     h_offset = width / 2
     h_offset += h_offset % 100
 
-    symbol_frame(f, -h_offset + 300, v_offset + 100, h_offset - 300, v_offset - height - 100)
+    symbol_frame(f, -h_offset + 300, v_offset + 100, h_offset - 300, v_offset - height - 0)
 
     # Plot all the banks except VSS and VDD
     direction = 'R'
     counter = 0
+    last_left_bank_height = 0
+    last_right_bank_height = 0
     for bank in sorted(banks.keys()):
         if not (bank == "VSS" or bank == "VDD"):
             if direction == 'R':
+                last_left_bank_height = len(banks[bank])
+                last_right_bank_height = 0
                 symbol_bank(f, banks[bank], -h_offset, v_offset + (-100 * 17) * counter, 100, direction)
                 direction = 'L'
             elif direction == 'L':
+                last_right_bank_height = len(banks[bank])
                 symbol_bank(f, banks[bank], h_offset, v_offset + (-100 * 17) * counter, 100, direction)
                 direction = 'R'
                 counter += 1
@@ -223,11 +228,13 @@ def lib_symbol(f, name, all_data, footprint):
     # If the last bank was on the left side then the VDD bank would go on the right side in theory,
     # this is not what we want though, we want both VDD and VSS to be on the same height, so we are moving down
     # to the next bank row
-    if direction == 'L':
-        counter += 1
+    if direction == 'R':
+        counter -= 1
 
-    symbol_bank(f, banks['VDD'], -h_offset, v_offset + (-100 * 17) * counter, 100, 'R')
-    symbol_bank(f, banks['VSS'],  h_offset, v_offset + (-100 * 17) * counter, 100, 'L')
+    last_bank_offset = -100 * (max(last_left_bank_height, last_right_bank_height) + 1)
+
+    symbol_bank(f, banks['VDD'], -h_offset, v_offset + (-100 * 17) * counter + last_bank_offset, 100, 'R')
+    symbol_bank(f, banks['VSS'],  h_offset, v_offset + (-100 * 17) * counter + last_bank_offset, 100, 'L')
 
     symbol_foot(f)
 
