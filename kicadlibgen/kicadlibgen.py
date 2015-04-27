@@ -60,7 +60,12 @@ def symbol_pin(f, name, num, x, y, direction):
 
 def symbol_bank(f, pins, x_offset, y_offset, spacing, direction):
     counter = 0
-    for pin in sorted(pins, key=lambda p: p['Pin_name']):
+
+    def pin_sort_key(pin_key):
+        m = re.match("(\D*)(\d*)", pin_key['Pin_name'])
+        return '{}{:0>3}'.format(m.group(1), m.group(2))
+
+    for pin in sorted(pins, key=pin_sort_key):
         name = pin['Pin_name']
         if pin['Pin_functions']:
             name += "/" + '/'.join(pin['Pin_functions'])
@@ -102,6 +107,44 @@ def vertical_height(banks):
     return max(left_height, right_height)
 
 
+def pin_append_combine(footprint, pin_list, new_pin):
+    # Extract the record with the same Pin number from the pin_list if available
+    pin = None
+    pin_index = 0
+    for p in pin_list:
+        if p['Pin'] == new_pin['Pin']:
+            pin = p
+            break
+        pin_index += 1
+
+    if pin:
+        old_functions = list(pin['Pin_functions'])
+        # If the new pin's name is different than the old we add it's name to the function list
+        if pin['Pin_name'] != new_pin['Pin_name']:
+            pin['Pin_functions'].append(new_pin['Pin_name'])
+        # If the new pin has some additional functions we add that too to the old pins function list.
+        for function in new_pin['Pin_functions']:
+            if function not in pin['Pin_functions']:
+                pin['Pin_functions'].append(function)
+        # Merge pin type
+        old_t = pin['Pin_type']
+        new_t = new_pin['Pin_type']
+        # If they are different then we just assume the result will be I/O (Yes I know that might be wrong but ...)
+        if old_t != new_t:
+            pin["Pin_type"] = "I/O"
+        pin_list[pin_index] = pin
+        # Report the merging action
+        print "Merge " + footprint + "\tpin\t", pin['Pin'], \
+            "\tName:", pin['Pin_name'], \
+            "\tType:", old_t, "+", new_t, "=", pin['Pin_type'], \
+            "\tFunc:", old_functions, "+", new_pin['Pin_functions'],
+        if pin['Pin_name'] != new_pin['Pin_name']:
+            print "+", new_pin['Pin_name'],
+        print "=", pin['Pin_functions']
+    else:
+        pin_list.append(new_pin)
+
+
 def lib_symbol(f, name, all_data, footprint):
     data = []
     # Filter data for the specific footprint
@@ -116,11 +159,12 @@ def lib_symbol(f, name, all_data, footprint):
                 functions = []
             pin_type = row['Pin_type']
             pin_structure = row['IO_structure']
-            data.append({'Pin': pin,
-                         'Pin_name': pin_name,
-                         'Pin_functions': functions,
-                         'Pin_type': pin_type,
-                         'Pin_structure': pin_structure})
+            pin_append_combine(footprint,
+                               data, {'Pin': pin,
+                                      'Pin_name': pin_name,
+                                      'Pin_functions': functions,
+                                      'Pin_type': pin_type,
+                                      'Pin_structure': pin_structure})
     # Group pins into banks
     banks = {'OTHER': [], 'VSS': [], 'VDD': []}
     for row in data:
@@ -247,7 +291,6 @@ except:
     print "Exiting!"
     exit(1)
 
-# print(footprints)
 source_dir = "../compact"
 source_filenames = glob.glob(source_dir + "/*")
 
@@ -258,5 +301,3 @@ lib_foot(libf)
 
 libf.close()
 
-#for row in r:
-#    print(row['LQFP100'])
