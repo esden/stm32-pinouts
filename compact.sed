@@ -31,7 +31,8 @@ s/ADC\([0-9]\+\)_IN\([0-9]\+\)/ADC\2/g
 s/DAC\([0-9]*\)_OUT\([0-9]\+\)/DAC\2/g
 
 # Universal serial: UsARTx_func -> Uxfunc
-s/US\?ART\([0-9]\+\)_\([^ 	]\+\)/U\1\2/g
+s/USART\([0-9]\+\)_\([^ 	]\+\)/U\1\2/g
+s/UART\([0-9]\+\)_\([^ 	]\+\)/U\1\2/g
 
 # Trace
 s/TRACE/TRA/g
