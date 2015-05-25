@@ -55,7 +55,7 @@ def symbol_frame(f, startx, starty, endx, endy):
 
 
 def symbol_pin(f, name, num, x, y, direction):
-    print >>f, "X %s %s %s %s 300 %s 50 50 1 1 I" % (name, num, x, y, direction)
+    print >>f, "X %s %s %s %s 300 %s 50 50 1 1 B" % (name, num, x, y, direction)
 
 
 def symbol_bank(f, pins, x_offset, y_offset, spacing, direction):
