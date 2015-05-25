@@ -116,7 +116,17 @@ def symbol_body_width(pins):
             name += "/" + '/'.join(pin['Pin_functions'])
         max_char_count = max(len(name), max_char_count)
 
-    return 55 * (max_char_count * 2 + 2)
+    # The Char width is not constant so we can not 100% rely on the char width value. This also means it is as wide as
+    # the widest character making the width usually larger than necessary.
+    char_width = 52
+    real_width = char_width * (max_char_count * 2 + 2)
+
+    # We need tou round to the nearest 100mil bound
+    width = real_width + (100 - (real_width % 100))
+
+    #print "Width %d" % width
+
+    return width
 
 
 def pin_append_combine(footprint, pin_list, new_pin):
