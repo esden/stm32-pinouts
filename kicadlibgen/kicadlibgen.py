@@ -163,7 +163,7 @@ def lib_symbol(f, name, all_data, footprint):
     for row in all_data:
         if not re.match("(^-$)|(^NC.*$)", row[footprint]):
             pin = row[footprint]
-            pin_name = row['Pin_name']
+            pin_name = row['Pin_name'].split('-')[0]
             if row['Alternate_functions']:
                 function_str = row['Alternate_functions']
                 functions = function_str.split(' ')
