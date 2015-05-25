@@ -257,7 +257,7 @@ def symbols_from_file(source_filename, target_file):
         if re.match("^ *#", line):
             print line,
             # Nothing to do just ignore
-        elif re.match("^----", line):
+        elif re.match("^----.*", line):
             # End of metadata block
             break
         else:
