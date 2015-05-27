@@ -9,7 +9,6 @@ import StringIO
 import os
 import glob
 
-
 def pretty_print_banks(banks):
     bank_names = sorted(banks.keys())
     for bank in bank_names:
@@ -54,8 +53,37 @@ def symbol_frame(f, startx, starty, endx, endy):
     print >>f, "S %s %s %s %s 0 1 10 N" % (startx, starty, endx, endy)
 
 
-def symbol_pin(f, name, num, x, y, direction):
-    print >>f, "X %s %s %s %s 300 %s 50 50 1 1 B" % (name, num, x, y, direction)
+def symbol_pin(f, name, num, x, y, direction, io_type):
+    pin_type = 'B'
+    # Pin types are:
+    # Input             I
+    # Output            O
+    # Bidirectional     B
+    # Tristate          T
+    # Passive           P
+    # Unspecified       U
+    # Power In          W
+    # Power out         w
+    # Open Collector    C
+    # Open Emitter      E
+    # Not Connected     N
+    if io_type:
+        if re.match("^I/O$", io_type):
+            pin_type = 'B'
+        elif re.match("^I$", io_type):
+            pin_type = 'I'
+        elif re.match("^O$", io_type):
+            pin_type = 'O'
+        elif re.match("^S$", io_type):
+            pin_type = 'W'
+        elif re.match("^NC$", io_type):
+            pin_type = 'N'
+        else:
+            print "Pin '%s' does not have a valid type '%s' defaulting to bidirectional 'B'." % (name, io_type)
+    else:
+        print "Pin '%s' io type is empty, defaulting to bidirectional 'B'." % name
+
+    print >>f, "X %s %s %s %s 300 %s 50 50 1 1 %s" % (name, num, x, y, direction, pin_type)
 
 
 def symbol_bank(f, pins, x_offset, y_offset, spacing, direction):
@@ -70,9 +98,9 @@ def symbol_bank(f, pins, x_offset, y_offset, spacing, direction):
         if pin['Pin_functions']:
             name += "/" + '/'.join(pin['Pin_functions'])
         if direction == 'R' or direction == 'L':
-            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction)
+            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction, pin['Pin_type'])
         elif direction == 'U' or direction == 'D':
-            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction)
+            symbol_pin(f, name, pin['Pin'], x_offset, y_offset - (counter * spacing), direction, pin['Pin_type'])
         else:
             print "Unknown direction!!!"
         counter += 1
